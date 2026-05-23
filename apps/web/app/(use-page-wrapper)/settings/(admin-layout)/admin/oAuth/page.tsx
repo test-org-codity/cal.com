@@ -1,25 +1,31 @@
 import { _generateMetadata, getTranslate } from "app/_utils";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-import SettingsHeader from "@calcom/features/settings/appDir/SettingsHeader";
+import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 
-import LegacyPage from "~/settings/admin/oauth-view";
+import { buildLegacyRequest } from "@lib/buildLegacyCtx";
+
+import OAuthClientsAdminView from "~/settings/admin/oauth-clients-admin-view";
+
+const Page = async () => {
+  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
+  await getTranslate();
+
+  if (!session) {
+    redirect("/auth/login?callbackUrl=/settings/admin/oauth");
+  }
+
+  return <OAuthClientsAdminView />;
+};
 
 export const generateMetadata = async () =>
   await _generateMetadata(
-    (t) => t("oAuth"),
-    (t) => t("admin_oAuth_description"),
+    (t) => t("oauth_clients_admin"),
+    (t) => t("oauth_clients_admin_description"),
     undefined,
     undefined,
-    "/settings/admin/oAuth"
+    "/settings/admin/oauth"
   );
-
-const Page = async () => {
-  const t = await getTranslate();
-  return (
-    <SettingsHeader title={t("oAuth")} description={t("admin_oAuth_description")}>
-      <LegacyPage />
-    </SettingsHeader>
-  );
-};
 
 export default Page;
