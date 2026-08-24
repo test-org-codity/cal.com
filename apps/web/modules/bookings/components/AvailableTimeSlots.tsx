@@ -194,7 +194,7 @@ export const AvailableTimeSlots = ({
     roundRobinChunkInfo?.hasMoreNonFixedHosts && onLoadNextRoundRobinChunk;
 
   const renderLoadMoreButton = () => {
-    if (!showLoadMoreButton) return null;
+    if (!showLoadMoreButton || !roundRobinChunkInfo) return null;
 
     const totalLoadedHosts =
       roundRobinChunkInfo.chunkOffset * roundRobinChunkInfo.chunkSize +

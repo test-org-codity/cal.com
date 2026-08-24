@@ -1059,9 +1059,6 @@ export class AvailableSlotsService {
 
     const nonFixedHosts = hosts.filter((host) => host.isFixed !== true);
     const { roundRobinManualChunking = false, roundRobinChunkOffset = 0 } = rest.input;
-    rrLog.info(
-      `RR chunking check for eventType=${eventType.id}: totalHosts=${hosts.length}, nonFixedHosts=${nonFixedHosts.length}, weightsEnabled=${eventType.isRRWeightsEnabled}`
-    );
 
     const shouldChunk =
       eventType.schedulingType === SchedulingType.ROUND_ROBIN &&
@@ -1071,6 +1068,10 @@ export class AvailableSlotsService {
     if (!shouldChunk) {
       return await calculateForHosts(hosts);
     }
+
+    rrLog.info(
+      `RR chunking check for eventType=${eventType.id}: totalHosts=${hosts.length}, nonFixedHosts=${nonFixedHosts.length}, weightsEnabled=${eventType.isRRWeightsEnabled}`
+    );
 
     const fixedHosts = hosts.filter((host) => host.isFixed);
     const manualChunkingEnabled = roundRobinManualChunking === true;
@@ -1104,17 +1105,17 @@ export class AvailableSlotsService {
     if (manualChunkingEnabled) {
       const chunkCount = hostChunks.length || 1;
       const safeChunkOffset = chunkCount > 0 ? Math.min(manualChunkOffset, chunkCount - 1) : 0;
-      const hostChunk = hostChunks[safeChunkOffset] ?? [];
-      const hostsForChunk = [...hostChunk, ...fixedHosts];
+      const hostsToCheck = hostChunks.slice(0, safeChunkOffset + 1).flat();
+      const hostsForChunk = [...hostsToCheck, ...fixedHosts];
       const chunkResult = await calculateForHosts(hostsForChunk);
       const chunkInfo = buildChunkInfo({
         chunkOffset: safeChunkOffset,
-        loadedNonFixedHosts: hostChunk.length,
+        loadedNonFixedHosts: hostsToCheck.length,
         hasMoreNonFixedHosts: chunkCount > 0 ? safeChunkOffset < chunkCount - 1 : false,
         manualChunking: true,
       });
       rrLog.info(
-        `RR manual chunk ${safeChunkOffset + 1} checked: hosts=${hostChunk.length}, slotsFound=${chunkResult.aggregatedAvailability.length}`
+        `RR manual chunk ${safeChunkOffset + 1} checked: hosts=${hostsToCheck.length}, slotsFound=${chunkResult.aggregatedAvailability.length}`
       );
       return {
         ...chunkResult,
@@ -1127,10 +1128,13 @@ export class AvailableSlotsService {
     );
 
     let lastResult: ChunkedAvailabilityResult | null = null;
-    for (let index = 0; index < hostChunks.length; index += 1) {
+    const chunkResults = await Promise.all(
+      hostChunks.map((hostChunk) => calculateForHosts([...hostChunk, ...fixedHosts]))
+    );
+
+    for (let index = 0; index < chunkResults.length; index += 1) {
       const hostChunk = hostChunks[index];
-      const hostsForChunk = [...hostChunk, ...fixedHosts];
-      const chunkResult = await calculateForHosts(hostsForChunk);
+      const chunkResult = chunkResults[index];
       const chunkInfo = buildChunkInfo({
         chunkOffset: index,
         loadedNonFixedHosts: hostChunk.length,
