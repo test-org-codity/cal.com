@@ -111,7 +111,12 @@ export class GetAvailableSlotsInput_2024_09_04 {
   @ApiHideProperty()
   rrHostSubsetIds?: number[];
 
-  @Transform(({ value }) => (value ? value.toLowerCase() === "true" : false))
+  @Transform(({ value }) => {
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true";
+    }
+    return value ? true : false;
+  })
   @IsBoolean()
   @IsOptional()
   @ApiHideProperty()
