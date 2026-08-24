@@ -43,44 +43,44 @@ export const addToWatchlistHandler = async ({ ctx, input }: AddToWatchlistOption
   }
 
   try {
-    const results = await Promise.all(
-      reportsToAdd.map(async (report) => {
-        const value =
-          input.type === "EMAIL"
-            ? report.bookerEmail
-            : report.bookerEmail.split("@")[1] || report.bookerEmail;
+    const results = [];
 
-        const existingWatchlist = await watchlistRepo.checkExists({
+    for (const report of reportsToAdd) {
+      const value =
+        input.type === "EMAIL"
+          ? report.bookerEmail
+          : report.bookerEmail.split("@")[1] || report.bookerEmail;
+
+      const existingWatchlist = await watchlistRepo.checkExists({
+        type: input.type,
+        value,
+        isGlobal: true,
+      });
+
+      let watchlistId: string;
+
+      if (existingWatchlist) {
+        watchlistId = existingWatchlist.id;
+      } else {
+        const newWatchlist = await watchlistRepo.createEntry({
           type: input.type,
           value,
+          organizationId: null,
+          action: WatchlistAction.BLOCK,
+          description: input.description,
+          userId: user.id,
           isGlobal: true,
         });
+        watchlistId = newWatchlist.id;
+      }
 
-        let watchlistId: string;
+      await bookingReportRepo.linkWatchlistToReport({
+        reportId: report.id,
+        watchlistId,
+      });
 
-        if (existingWatchlist) {
-          watchlistId = existingWatchlist.id;
-        } else {
-          const newWatchlist = await watchlistRepo.createEntry({
-            type: input.type,
-            value,
-            organizationId: null,
-            action: WatchlistAction.BLOCK,
-            description: input.description,
-            userId: user.id,
-            isGlobal: true,
-          });
-          watchlistId = newWatchlist.id;
-        }
-
-        await bookingReportRepo.linkWatchlistToReport({
-          reportId: report.id,
-          watchlistId,
-        });
-
-        return { reportId: report.id, watchlistId, value };
-      })
-    );
+      results.push({ reportId: report.id, watchlistId, value });
+    }
 
     return {
       success: true,

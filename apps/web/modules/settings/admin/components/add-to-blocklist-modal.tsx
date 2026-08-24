@@ -18,6 +18,7 @@ type BookingReport = RouterOutputs["viewer"]["admin"]["listBookingReports"]["row
 interface AddToWatchlistModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   report?: BookingReport;
   reports?: BookingReport[];
 }
@@ -29,7 +30,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AddToBlocklistModal({ open, onClose, report, reports }: AddToWatchlistModalProps) {
+export function AddToBlocklistModal({
+  open,
+  onClose,
+  onSuccess,
+  report,
+  reports,
+}: AddToWatchlistModalProps) {
   const { t } = useLocale();
   const utils = trpc.useUtils();
 
@@ -41,13 +48,6 @@ export function AddToBlocklistModal({ open, onClose, report, reports }: AddToWat
     },
   });
 
-  const isBulk = !!reports && reports.length > 0;
-  const firstReport = isBulk ? reports[0] : report;
-
-  if (!firstReport) {
-    return null;
-  }
-
   const watchlistType = form.watch("type");
 
   const addToWatchlistMutation = trpc.viewer.admin.addToWatchlist.useMutation({
@@ -55,12 +55,20 @@ export function AddToBlocklistModal({ open, onClose, report, reports }: AddToWat
       showToast(t("successfully_added_to_blocklist"), "success");
       utils.viewer.admin.listBookingReports.invalidate();
       onClose();
+      onSuccess?.();
       form.reset();
     },
     onError: (error) => {
       showToast(error.message, "error");
     },
   });
+
+  const isBulk = !!reports && reports.length > 0;
+  const firstReport = isBulk ? reports[0] : report;
+
+  if (!firstReport) {
+    return null;
+  }
 
   const onSubmit = (data: FormValues) => {
     const reportIds = isBulk ? reports.map((r) => r.id) : [firstReport.id];

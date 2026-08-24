@@ -23,6 +23,10 @@ export function BulkAddToBlocklist({ reports, onSuccess }: BulkAddToBlocklistPro
 
   const handleModalClose = () => {
     setShowModal(false);
+  };
+
+  const handleSuccess = () => {
+    setShowModal(false);
     onSuccess();
   };
 
@@ -42,7 +46,12 @@ export function BulkAddToBlocklist({ reports, onSuccess }: BulkAddToBlocklistPro
       </Button>
 
       {showModal && (
-        <AddToBlocklistModal open={showModal} onClose={handleModalClose} reports={reportsToAdd} />
+        <AddToBlocklistModal
+          open={showModal}
+          onClose={handleModalClose}
+          onSuccess={handleSuccess}
+          reports={reportsToAdd}
+        />
       )}
     </>
   );
