@@ -910,6 +910,7 @@ export default function Success(props: PageProps) {
                             isHost={isHost}
                             internalNotePresets={props.internalNotePresets}
                             renderContext="booking-single-view"
+                            bookingFields={eventType.bookingFields}
                           />
                         </>
                       ))}
